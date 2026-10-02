@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maze Escape 3D - 3D Labyrinth Exploration & Survival</title>
+  <meta name="description" content="Explore procedural 3D labyrinths, collect glowing golden orbs to unlock ancient portals, and escape before the countdown timer expires. Built with Three.js and WebGL.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- WebGL 3D Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- FPS Crosshair -->
+  <div id="crosshair"></div>
+
+  <!-- Pointer Lock Click Helper -->
+  <div id="click-prompt">Click to Look & Control Camera</div>
+
+  <!-- HUD Overlay -->
+  <div id="hud">
+    <!-- Top Bar Stats -->
+    <div class="hud-top">
+      <div class="hud-card">
+        <div class="stat-group">
+          <span class="stat-label">Level</span>
+          <span class="stat-value" id="hud-level">1</span>
+        </div>
+        <div class="stat-group">
+          <span class="stat-label">Orbs</span>
+          <span class="stat-value gold-glow" id="hud-orbs">0/3</span>
+        </div>
+        <div class="stat-group">
+          <span class="stat-label">Score</span>
+          <span class="stat-value" id="hud-score">0</span>
+        </div>
+      </div>
+
+      <div class="hud-card timer-card">
+        <div class="stat-group" style="width: 100%;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="stat-label">Time Remaining</span>
+            <span class="stat-value" id="hud-timer">45s</span>
+          </div>
+          <div class="timer-bar-container">
+            <div id="timer-bar" class="timer-bar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Minimap Glassmorphic Card -->
+    <div class="minimap-container" id="minimap-card">
+      <div class="minimap-header">
+        <span>Minimap</span>
+        <span style="font-size: 9px; opacity: 0.7;">[M] Toggle</span>
+      </div>
+      <canvas id="minimap-canvas" width="160" height="160"></canvas>
+      <div class="minimap-legend">
+        <div class="legend-item"><div class="legend-dot dot-player"></div>Player</div>
+        <div class="legend-item"><div class="legend-dot dot-orb"></div>Orb</div>
+        <div class="legend-item"><div class="legend-dot dot-portal"></div>Exit</div>
+      </div>
+    </div>
+
+    <!-- Status Toast Notification -->
+    <div id="status-toast">
+      <span id="toast-text">Level Started!</span>
+    </div>
+
+    <!-- Bottom Controls Helper -->
+    <div class="hud-bottom">
+      <div class="controls-badge">
+        <span><span class="key-badge">W</span><span class="key-badge">A</span><span class="key-badge">S</span><span class="key-badge">D</span> Move / Strafe</span>
+        <span><span class="key-badge">Mouse</span> Look</span>
+        <span><span class="key-badge">M</span> Minimap</span>
+        <span><span class="key-badge">P</span> Pause</span>
+        <span><span class="key-badge">R</span> Restart</span>
+      </div>
+
+      <button id="audio-btn" class="audio-btn" title="Toggle Sound FX" aria-label="Toggle Sound">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Menu Modal -->
+  <div class="modal-overlay active" id="menu-modal">
+    <div class="modal-content">
+      <h1 class="game-title">Maze Escape 3D</h1>
+      <div class="game-subtitle">Computer Graphics Mini Project &bull; Procedural Dungeon Survival</div>
+      
+      <div class="story-box">
+        <p>You are trapped inside a shifting subterranean labyrinth. The exit portal is locked with ancient runic wards.</p>
+        <p>Navigate the procedural corridors, collect all floating <strong>glowing golden orbs</strong> to break the seals, and escape through the emerald portal before your lantern extinguishes!</p>
+      </div>
+
+      <div class="controls-grid">
+        <div class="control-item">
+          <span class="key-badge">W A S D</span>
+          <span>Move & Strafe</span>
+        </div>
+        <div class="control-item">
+          <span class="key-badge">Mouse</span>
+          <span>FPS Freelook</span>
+        </div>
+        <div class="control-item">
+          <span class="key-badge">M</span>
+          <span>Toggle Fog-of-War Minimap</span>
+        </div>
+        <div class="control-item">
+          <span class="key-badge">P</span>
+          <span>Pause Game</span>
+        </div>
+      </div>
+
+      <button id="btn-start" class="btn-primary">
+        Enter The Labyrinth
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Pause Modal -->
+  <div class="modal-overlay" id="pause-modal">
+    <div class="modal-content" style="max-width: 440px;">
+      <h2 class="game-title" style="font-size: 32px;">Game Paused</h2>
+      <div class="game-subtitle">Take a breather</div>
+
+      <button id="btn-resume" class="btn-primary" style="margin-bottom: 12px;">Resume Exploration</button>
+      <button id="btn-restart-pause" class="btn-secondary">Restart Level</button>
+    </div>
+  </div>
+
+  <!-- Level Completed Modal -->
+  <div class="modal-overlay" id="level-done-modal">
+    <div class="modal-content" style="max-width: 480px;">
+      <h2 class="game-title" style="font-size: 36px; color: var(--portal-green);">Portal Escaped!</h2>
+      <div class="game-subtitle">The runic chamber dissolves into deeper depths</div>
+
+      <div class="results-card">
+        <div class="result-item">
+          <span class="result-val gold-glow" id="done-bonus">+300</span>
+          <span class="result-lbl">Time Bonus</span>
+        </div>
+        <div class="result-item">
+          <span class="result-val" id="done-score">600</span>
+          <span class="result-lbl">Total Score</span>
+        </div>
+      </div>
+
+      <button id="btn-next-level" class="btn-primary">
+        Descend To Next Level
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div class="modal-overlay" id="game-over-modal">
+    <div class="modal-content" style="max-width: 480px;">
+      <h2 class="game-title" style="font-size: 36px; color: var(--portal-red);">Time Expired</h2>
+      <div class="game-subtitle">The torch flickers and darkness consumes the halls</div>
+
+      <div class="results-card">
+        <div class="result-item">
+          <span class="result-val" id="over-level">1</span>
+          <span class="result-lbl">Reached Level</span>
+        </div>
+        <div class="result-item">
+          <span class="result-val gold-glow" id="over-score">0</span>
+          <span class="result-lbl">Final Score</span>
+        </div>
+      </div>
+
+      <button id="btn-retry" class="btn-primary">
+        Try Again
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="three.min.js"></script>
+  <script src="audio.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
